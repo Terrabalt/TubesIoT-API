@@ -34,6 +34,7 @@ func (s ControlSignal) Render(w http.ResponseWriter, r *http.Request) error {
 
 type config struct {
 	SQLiteURL string `env:"SQLDB"`
+	Port      string `env:"PORT"`
 }
 
 func main() {
@@ -111,4 +112,5 @@ func main() {
 
 		render.Status(r, http.StatusNoContent)
 	})
+	log.Fatalf("Server stopped: %e", http.ListenAndServe(":"+conf.Port, r))
 }
