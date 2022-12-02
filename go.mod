@@ -9,6 +9,8 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/rs/zerolog v1.28.0
 	github.com/sethvargo/go-envconfig v0.8.3
+	github.com/simukti/sqldb-logger v0.0.0-20220521163925-faf2f2be0eb6
+	github.com/simukti/sqldb-logger/logadapter/zerologadapter v0.0.0-20220521163925-faf2f2be0eb6
 )
 
 require (

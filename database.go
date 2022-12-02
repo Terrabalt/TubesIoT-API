@@ -6,6 +6,8 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/rs/zerolog/log"
+	sqldblogger "github.com/simukti/sqldb-logger"
+	"github.com/simukti/sqldb-logger/logadapter/zerologadapter"
 )
 
 type DB struct {
@@ -20,6 +22,8 @@ func StartDB(dbInfo string) (DB, error) {
 		return DB{nil}, err
 	}
 
+	loggerAdapter := zerologadapter.New(log.Logger)
+	db = sqldblogger.OpenDriver(dbInfo, db.Driver(), loggerAdapter, sqldblogger.WithSQLQueryAsMessage(true))
 	err = db.Ping()
 	if err != nil {
 		return DB{nil}, err
@@ -43,7 +47,7 @@ func (db DB) InitDB(ctx context.Context) error {
 		isOn, suhu
 	)
 	VALUES
-		($1, $2)`)
+		(?, ?)`)
 	if err != nil {
 		return err
 	}
@@ -54,14 +58,14 @@ func (db DB) InitDB(ctx context.Context) error {
 	FROM
 		monitor
 	LIMIT
-		$1`)
+		?`)
 	return err
 }
 
 func (db DB) GetData(ctx context.Context) ([]Status, error) {
 	var m []Status
 
-	rows, err := getStatement.QueryContext(ctx)
+	rows, err := getStatement.QueryContext(ctx, -20)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +85,10 @@ func (db DB) GetData(ctx context.Context) ([]Status, error) {
 	}
 	return m, nil
 }
-func (db DB) AddData(ctx context.Context, isOn bool, suhu float32) error {
-	_, err := insertStatement.ExecContext(ctx, isOn, suhu)
-	return err
+func (db DB) AddData(ctx context.Context, isOn bool, suhu float32) (int64, error) {
+	res, err := insertStatement.ExecContext(ctx, isOn, suhu)
+	if err != nil {
+		return 0, err
+	}
+	return res.LastInsertId()
 }

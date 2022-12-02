@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"net"
 	"net/http"
 
 	"github.com/go-chi/chi"
@@ -66,7 +68,7 @@ func main() {
 		s, err := db.GetData(r.Context())
 		if err != nil {
 			render.Status(r, http.StatusInternalServerError)
-			w.Header().Set("content-type", "application/json")
+			render.PlainText(w, r, err.Error())
 			return
 		}
 
@@ -74,8 +76,6 @@ func main() {
 			a = append(a, ss)
 		}
 		render.Status(r, http.StatusOK)
-		w.Header().Set("content-type", "application/json")
-
 		render.RenderList(w, r, a)
 	})
 	r.Post("/TurnOnLamp", func(w http.ResponseWriter, r *http.Request) {
@@ -84,7 +84,6 @@ func main() {
 		}
 
 		render.Status(r, http.StatusOK)
-		w.Header().Set("content-type", "application/json")
 		render.Render(w, r, a)
 	})
 	r.Post("/TurnOffLamp", func(w http.ResponseWriter, r *http.Request) {
@@ -93,24 +92,33 @@ func main() {
 		}
 
 		render.Status(r, http.StatusOK)
-		w.Header().Set("content-type", "application/json")
 		render.Render(w, r, a)
 	})
 	r.Post("/post0data", func(w http.ResponseWriter, r *http.Request) {
 		data := &Status{}
 		if err := render.Bind(r, data); err != nil {
 			render.Status(r, http.StatusBadRequest)
-			w.Header().Set("content-type", "application/json")
+			render.PlainText(w, r, err.Error())
 			return
 		}
-
-		if err := db.AddData(r.Context(), data.IsOn, data.Suhu); err != nil {
+		var row int64
+		if row, err = db.AddData(r.Context(), data.IsOn, data.Suhu); err != nil {
 			render.Status(r, http.StatusInternalServerError)
-			w.Header().Set("content-type", "application/json")
+			render.PlainText(w, r, err.Error())
 			return
 		}
 
-		render.Status(r, http.StatusNoContent)
+		render.Status(r, http.StatusCreated)
+		render.PlainText(w, r, fmt.Sprintf("rows: %d", row))
 	})
-	log.Fatalf("Server stopped: %e", http.ListenAndServe(":"+conf.Port, r))
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	localAddr := conn.LocalAddr().(*net.UDPAddr).IP
+	conn.Close()
+
+	fmt.Println("IP: ", localAddr, ":", conf.Port)
+	fmt.Printf("Server stopped: %e\n", http.ListenAndServe(":"+conf.Port, r))
 }
