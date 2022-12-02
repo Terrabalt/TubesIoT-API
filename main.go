@@ -13,8 +13,8 @@ import (
 )
 
 type Status struct {
-	IsOn bool `json:"isOn"`
-	Suhu int  `json:"suhu"`
+	IsOn bool    `json:"isOn"`
+	Suhu float32 `json:"suhu"`
 }
 
 func (s Status) Render(w http.ResponseWriter, r *http.Request) error {
@@ -60,14 +60,22 @@ func main() {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Recoverer)
 	r.Get("/status", func(w http.ResponseWriter, r *http.Request) {
-		a := Status{
-			true,
-			30,
+		var a []render.Renderer
+
+		s, err := db.GetData(r.Context())
+		if err != nil {
+			render.Status(r, http.StatusInternalServerError)
+			w.Header().Set("content-type", "application/json")
+			return
 		}
 
+		for _, ss := range s {
+			a = append(a, ss)
+		}
 		render.Status(r, http.StatusOK)
 		w.Header().Set("content-type", "application/json")
-		render.Render(w, r, a)
+
+		render.RenderList(w, r, a)
 	})
 	r.Post("/TurnOnLamp", func(w http.ResponseWriter, r *http.Request) {
 		a := ControlSignal{
@@ -91,6 +99,12 @@ func main() {
 		data := &Status{}
 		if err := render.Bind(r, data); err != nil {
 			render.Status(r, http.StatusBadRequest)
+			w.Header().Set("content-type", "application/json")
+			return
+		}
+
+		if err := db.AddData(r.Context(), data.IsOn, data.Suhu); err != nil {
+			render.Status(r, http.StatusInternalServerError)
 			w.Header().Set("content-type", "application/json")
 			return
 		}

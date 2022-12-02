@@ -58,13 +58,8 @@ func (db DB) InitDB(ctx context.Context) error {
 	return err
 }
 
-type MonitorData struct {
-	IsOn bool
-	Suhu float32
-}
-
-func (db DB) GetData(ctx context.Context) ([]MonitorData, error) {
-	var m []MonitorData
+func (db DB) GetData(ctx context.Context) ([]Status, error) {
+	var m []Status
 
 	rows, err := getStatement.QueryContext(ctx)
 	if err != nil {
@@ -72,7 +67,7 @@ func (db DB) GetData(ctx context.Context) ([]MonitorData, error) {
 	}
 
 	for rows.Next() {
-		d := MonitorData{}
+		d := Status{}
 		if err := rows.Scan(
 			&d.IsOn,
 			&d.Suhu,
